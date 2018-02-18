@@ -16,8 +16,7 @@ int main(int argc, char* pArgv[])
   UNUSED(pArgv);
 
   Window *pWindow = new Window("VolumeTrace", SizeX, SizeY);
-  float3 *pFloatRenderBuffer = MALLOC2D(float3, SizeX, SizeY);
-  float3 *__cuda__pRenderBuffer;
+  uchar4 *__cuda__pRenderBuffer;
   Octree *pOctree = new Octree(2);
 
   pOctree->AddNode(make_ulonglong3(0, 0, 0));
@@ -27,6 +26,10 @@ int main(int argc, char* pArgv[])
 
   pOctree->Save("octree.oct");
 
+  delete(pOctree);
+
+  pOctree = new Octree("octree.oct", true);
+
   Init(SizeX, SizeY, &__cuda__pRenderBuffer);
 
   while (true)
@@ -34,14 +37,11 @@ int main(int argc, char* pArgv[])
     uint32_t *pRenderBuffer = pWindow->GetPixels();
 
     Render(SizeX, SizeY, Samples, __cuda__pRenderBuffer);
-    cudaMemcpy(pFloatRenderBuffer, __cuda__pRenderBuffer, sizeof(float3) * SizeX * SizeY, cudaMemcpyKind::cudaMemcpyDeviceToHost);
+    cudaMemcpy(pRenderBuffer, __cuda__pRenderBuffer, sizeof(uchar4) * SizeX * SizeY, cudaMemcpyKind::cudaMemcpyDeviceToHost);
 
-    for (size_t i = 0; i < SizeX * SizeY; i++)
-    {
-      float3 color = pFloatRenderBuffer[i];
-
-      pRenderBuffer[i] = uint32_t(uint8_t(color.x * (float)0xFF)) | (uint32_t(uint8_t(color.y * (float)0xFF)) << 0x08) | (uint32_t(uint8_t(color.z * (float)0xFF)) << 0x10);
-    }
+    pOctree->GetNode(1)->GetChild(1, pOctree, 1);
+    pOctree->Update();
+    pOctree->IncreaseFrames();
 
     pWindow->Swap();
   }
@@ -50,5 +50,4 @@ int main(int argc, char* pArgv[])
 
   pWindow->Close();
   delete(pWindow);
-  FREE(pFloatRenderBuffer);
 }

@@ -25,8 +25,6 @@ private:
   T **m_pBlocks;
 };
 
-#include "ChunkedArray.h"
-
 template<typename T, size_t TBlockSize>
 inline ChunkedArray<T, TBlockSize>::ChunkedArray()
 {

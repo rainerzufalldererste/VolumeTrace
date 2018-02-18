@@ -13,7 +13,7 @@ enum
 };
 
 __global__
-void renderKernel(size_t count, size_t width, size_t height, size_t samples, float3 *__cuda__pRenderBuffer)
+void renderKernel(size_t count, size_t width, size_t height, size_t samples, uchar4 *__cuda__pRenderBuffer)
 {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -23,24 +23,24 @@ void renderKernel(size_t count, size_t width, size_t height, size_t samples, flo
   if (i >= count)
     return;
 
-  __cuda__pRenderBuffer[i] = make_float3(x / (float)width, y / (float)height, (x + y) / (float)(width + height));
+  __cuda__pRenderBuffer[i] = make_uchar4((uint8_t)(x / (float)width * 0xFF) , (uint8_t)(y / (float)height * 0xFF), (uint8_t)((x + y) / (float)(width + height) * 0xFF), 0);
 }
 
 extern "C" 
 {
-  void Init(size_t width, size_t height, float3 **p__cuda__pRenderBuffer)
+  void Init(size_t width, size_t height, uchar4 **p__cuda__pRenderBuffer)
   {
-    cudaMalloc(p__cuda__pRenderBuffer, sizeof(float3) * width * height);
+    cudaMalloc(p__cuda__pRenderBuffer, sizeof(uchar4) * width * height);
   }
 
-	void Render(size_t width, size_t height, size_t samples, float3 *__cuda__pRenderBuffer)
+	void Render(size_t width, size_t height, size_t samples, uchar4 *__cuda__pRenderBuffer)
 	{
     renderKernel<<<width * height, BlockSize>>>(width * height, width, height, samples, __cuda__pRenderBuffer);
 
     cudaDeviceSynchronize();
 	}
 
-  void Cleanup(float3 **p__cuda__pRenderBuffer)
+  void Cleanup(uchar4 **p__cuda__pRenderBuffer)
   {
     cudaFree(*p__cuda__pRenderBuffer);
   }
