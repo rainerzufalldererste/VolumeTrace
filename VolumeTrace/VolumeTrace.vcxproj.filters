@@ -38,6 +38,9 @@
     <ClInclude Include="src\FlushQueue.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\CudaOctree.cuh">
+      <Filter>cuda</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\kernel.cu">

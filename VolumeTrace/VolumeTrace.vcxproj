@@ -103,6 +103,7 @@ copy "$(SolutionDir)3rdParty\sdl2\lib\$(Platform)\SDL2.dll" "$(OutDir)"
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\ChunkedArray.h" />
+    <ClInclude Include="src\CudaOctree.cuh" />
     <ClInclude Include="src\default.h" />
     <ClInclude Include="src\FlushQueue.h" />
     <ClInclude Include="src\kernel.h" />

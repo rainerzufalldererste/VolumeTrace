@@ -213,17 +213,55 @@ void Octree::Update()
     }
 
     uOctPtr_t destination = GetNewChildIndex();
-    MEMCPY(GetNode(destination), nodes, OctreeNode, 8);
+    OctreeNode *pDestination = GetNode(destination);
+
+    MEMCPY(pDestination, nodes, OctreeNode, 8);
+
     pParent->m_childIndex = destination;
     pParent->m_unloadedChildren = 0;
+
+    if (m_pUploadFuncCallback)
+    {
+      (*m_pUploadFuncCallback)(&nodes, 8 * sizeof(OctreeNode), destination * sizeof(OctreeNode));
+      (*m_pUploadFuncCallback)(pParent, 1 * sizeof(OctreeNode), m_streamerQueue[i] * sizeof(OctreeNode));
+    }
   }
 
   m_streamerQueue.Flush();
+
+  if (m_pFinishUploadCallback)
+    (*m_pFinishUploadCallback)();
 }
 
 void Octree::IncreaseFrames()
 {
   m_currentFrame++;
+}
+
+void Octree::SetMaxSize(size_t maxSize)
+{
+  m_maxSize = maxSize / sizeof(OctreeNode);
+}
+
+void Octree::SetUpload(UploadFunc * pCallback)
+{
+  m_pUploadFuncCallback = pCallback;
+
+  size_t blockSize = m_nodes.GetBlockSize();
+
+  // TODO: check for maximum size.
+
+  for (int64_t i = 0; i < int64_t(m_nodes.Size() - blockSize); i += blockSize)
+    m_pUploadFuncCallback(m_nodes.GetPtrAt(i), blockSize * sizeof(OctreeNode), i);
+
+  size_t lastBlockIndex = (m_nodes.Size() / blockSize) * blockSize;
+
+  m_pUploadFuncCallback(m_nodes.GetPtrAt(lastBlockIndex), (m_nodes.Size() % blockSize) * sizeof(OctreeNode), lastBlockIndex * sizeof(OctreeNode));
+}
+
+void Octree::SetFinishUpload(FinishUploadFunc * pCallback)
+{
+  m_pFinishUploadCallback = pCallback;
 }
 
 OctreeNode * Octree::AddNode()

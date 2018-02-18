@@ -8,6 +8,8 @@
 using namespace std;
 
 typedef uint32_t uOctPtr_t;
+typedef void (UploadFunc)(void * pData, size_t size, size_t position);
+typedef void (FinishUploadFunc)();
 
 class Octree;
 
@@ -42,6 +44,9 @@ public:
   void Enqueue(uOctPtr_t parentIndex);
   void Update();
   void IncreaseFrames();
+  void SetMaxSize(size_t maxSize);
+  void SetUpload(UploadFunc *pCallback);
+  void SetFinishUpload(FinishUploadFunc *pCallback);
 
 private:
   ChunkedArray<OctreeNode, 256> m_nodes; // blockSize no less than 8
@@ -50,6 +55,9 @@ private:
   uint64_t m_center;
   FILE *m_pFile;
   uint64_t m_currentFrame = 0;
+  size_t m_maxSize = 0;
+  UploadFunc *m_pUploadFuncCallback = nullptr;
+  FinishUploadFunc *m_pFinishUploadCallback = nullptr;
 
   OctreeNode *AddNode();
 };

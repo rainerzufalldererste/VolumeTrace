@@ -30,17 +30,26 @@
 #define MEMSET3D(ptr, value, type, countX, countY, countZ) (memset(ptr, value, sizeof(type) * countX * countY * countZ))
 #define MEMCPY(dst, src, type, count) (memcpy(dst, src, sizeof(type) * count))
 #define UNUSED(v) ((void)v)
-#define RELASSERT(booleanExpression, ...) {assert(booleanExpression);}
+#define RELASSERT(booleanExpression) {assert(booleanExpression);}
 
 #ifdef _DEBUG
-#define ASSERT(booleanExpression, ...) {assert(booleanExpression);}
+#define ASSERT(booleanExpression) {assert(booleanExpression);}
 #else
-#define ASSERT(booleanExpression, ...) /**/
+#define ASSERT(booleanExpression) /* NOT TRIGGERED IN RELEASE */
 #endif
 
 #define PI M_PI
+#define HALFPI M_PI_2
+#define QUARTERPI M_PI_4
 #define SQRT2 M_SQRT2
 #define INVSQRT2 M_SQRT1_2
+#define SQRT3 1.414213562373095048801688724209698
+#define INV_SQRT3 0.5773502691896257645091487805019574556
+#define PIf 3.141592653589793f
+#define SQRT2f 1.414213562373095f
+#define INVSQRT2f 0.7071067811865475f
+#define SQRT3f 1.414213562373095f
+#define INVSQRT3f 0.57735026918962576f
 
 enum Error
 {
