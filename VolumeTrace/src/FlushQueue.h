@@ -51,6 +51,9 @@ inline Error FlushQueue<T, TCapacity>::Enqueue(T element)
   if (m_size >= TCapacity)
     return IndexOutOfBoundsError;
 
+  if (m_size > 0 && m_pData[m_size - 1] == element)
+    return Success;
+
   m_pData[m_size++] = element;
 
   return Success;

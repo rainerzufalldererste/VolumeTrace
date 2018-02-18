@@ -17,7 +17,7 @@ enum
 };
 
 __global__
-void renderKernel(size_t count, size_t width, size_t height, size_t samples, uchar4 *__cuda__pRenderBuffer, OctreeNode *__cuda__pOctData)
+void renderKernel(size_t count, size_t width, size_t height, size_t samples, uchar4 *__cuda__pRenderBuffer, OctreeNode *__cuda__pOctData, uOctPtr_t *__cuda__pStreamerData)
 {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -52,7 +52,7 @@ void renderKernel(size_t count, size_t width, size_t height, size_t samples, uch
     {
       if (currentNode.m_unloadedChildren == 1)
       {
-        // TODO: Tell streamer.
+        __cuda__pStreamerData[i] = node;
         break;
       }
       else if (currentNode.m_childFlags != 0)
@@ -106,24 +106,35 @@ void renderKernel(size_t count, size_t width, size_t height, size_t samples, uch
 
 extern "C" 
 {
-  void Init(size_t width, size_t height, uchar4 **p__cuda__pRenderBuffer, size_t gpuOctreeBufferSize, void **p__cuda__pOctreeData)
+  void Init(size_t width, size_t height, uchar4 **p__cuda__pRenderBuffer, size_t gpuOctreeBufferSize, void **p__cuda__pOctreeData, uOctPtr_t **p__cuda__pStreamerData)
   {
-    cudaMalloc(p__cuda__pRenderBuffer, sizeof(uchar4) * width * height);
+    cudaError_t error = cudaMalloc(p__cuda__pRenderBuffer, sizeof(uchar4) * width * height);
+    ASSERT(error == cudaSuccess);
 
-    cudaMalloc(p__cuda__pOctreeData, gpuOctreeBufferSize);
-    cudaMemset(p__cuda__pOctreeData, 0, gpuOctreeBufferSize);
+    error = cudaMalloc(p__cuda__pOctreeData, gpuOctreeBufferSize);
+    ASSERT(error == cudaSuccess);
+    error = cudaMemset(*p__cuda__pOctreeData, 0, gpuOctreeBufferSize);
+    ASSERT(error == cudaSuccess);
+
+    error = cudaMalloc(p__cuda__pStreamerData, sizeof(uOctPtr_t) * width * height);
+    ASSERT(error == cudaSuccess);
   }
 
-	void Render(size_t width, size_t height, size_t samples, uchar4 *__cuda__pRenderBuffer, void *__cuda__pOctreeData)
+	void Render(size_t width, size_t height, size_t samples, uchar4 *__cuda__pRenderBuffer, void *__cuda__pOctreeData, uOctPtr_t *__cuda__pStreamerData)
 	{
-    renderKernel<<<width * height, BlockSize>>>(width * height, width, height, samples, __cuda__pRenderBuffer, (OctreeNode *)__cuda__pOctreeData);
+    cudaError_t error = cudaMemset(__cuda__pStreamerData, 0, sizeof(uOctPtr_t) * width * height);
+    ASSERT(error == cudaSuccess);
 
-    ASSERT(cudaDeviceSynchronize() == cudaSuccess);
+    renderKernel<<<width * height, BlockSize>>>(width * height, width, height, samples, __cuda__pRenderBuffer, (OctreeNode *)__cuda__pOctreeData, __cuda__pStreamerData);
+
+    error = cudaDeviceSynchronize();
+    ASSERT(error == cudaSuccess);
 	}
 
-  void Cleanup(uchar4 **p__cuda__pRenderBuffer, void **p__cuda__pOctreeData)
+  void Cleanup(uchar4 **p__cuda__pRenderBuffer, void **p__cuda__pOctreeData, uOctPtr_t **p__cuda__pStreamerData)
   {
     cudaFree(*p__cuda__pRenderBuffer);
     cudaFree(*p__cuda__pOctreeData);
+    cudaFree(*p__cuda__pStreamerData);
   }
 }

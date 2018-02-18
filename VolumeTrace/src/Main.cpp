@@ -26,7 +26,9 @@ int main(int argc, char* pArgv[])
 
   Window *pWindow = new Window("VolumeTrace", SizeX, SizeY);
   uchar4 *__cuda__pRenderBuffer;
-  Octree *pOctree = new Octree(3);
+  uOctPtr_t *__cuda__pStreamerData;
+  uOctPtr_t *pStreamerData = MALLOC2D(uOctPtr_t, SizeX, SizeY);
+  Octree *pOctree = new Octree(5);
 
   pOctree->AddNode(make_ulonglong3(0, 0, 0))->m_color = make_float4(1, 1, 1, 1);
   pOctree->AddNode(make_ulonglong3(1, 0, 0))->m_color = make_float4(1, 0, 0, 1);
@@ -40,7 +42,7 @@ int main(int argc, char* pArgv[])
   delete(pOctree);
 
   cudaStreamCreate(&cudaStream);
-  Init(SizeX, SizeY, &__cuda__pRenderBuffer, GpuBufferSize, &__cuda__pOctreeData);
+  Init(SizeX, SizeY, &__cuda__pRenderBuffer, GpuBufferSize, &__cuda__pOctreeData, &__cuda__pStreamerData);
 
   pOctree = new Octree("octree.oct", true);
   pOctree->SetMaxSize(GpuBufferSize);
@@ -53,14 +55,22 @@ int main(int argc, char* pArgv[])
   {
     uint32_t start = SDL_GetTicks();
 
-    Render(SizeX, SizeY, Samples, __cuda__pRenderBuffer, __cuda__pOctreeData);
+    Render(SizeX, SizeY, Samples, __cuda__pRenderBuffer, __cuda__pOctreeData, __cuda__pStreamerData);
 
     uint32_t cuda = SDL_GetTicks() - start;
     start = SDL_GetTicks();
 
     cudaMemcpy(pRenderBuffer, __cuda__pRenderBuffer, sizeof(uchar4) * SizeX * SizeY, cudaMemcpyKind::cudaMemcpyDeviceToHost);
+    cudaMemcpy(pStreamerData, __cuda__pStreamerData, sizeof(uOctPtr_t) * SizeX * SizeY, cudaMemcpyKind::cudaMemcpyDeviceToHost);
 
     uint32_t gpuDownload = SDL_GetTicks() - start;
+    start = SDL_GetTicks();
+
+    for (size_t i = 0; i < SizeX * SizeY; i++)
+      if (pStreamerData[i] != 0)
+        pOctree->Enqueue(pStreamerData[i]);
+
+    uint32_t processStreamer = SDL_GetTicks() - start;
     start = SDL_GetTicks();
 
     pOctree->GetNode(1)->GetChild(1, pOctree, 1);
@@ -78,6 +88,7 @@ int main(int argc, char* pArgv[])
     static uint32_t second = SDL_GetTicks() + 1000;
     static uint32_t _cuda = 0;
     static uint32_t _gpuDownload = 0;
+    static uint32_t _processStreamer = 0;
     static uint32_t _octUpdate = 0;
     static uint32_t _swap = 0;
     static uint32_t _frames = 0;
@@ -86,24 +97,26 @@ int main(int argc, char* pArgv[])
     _gpuDownload += gpuDownload;
     _octUpdate += octUpdate;
     _swap += swap;
+    _processStreamer += processStreamer;
     _frames++;
 
     if (SDL_GetTicks() > second)
     {
       second = SDL_GetTicks() + 1000;
-      uint32_t total = _cuda + _gpuDownload + _octUpdate + _swap;
+      uint32_t total = _cuda + _gpuDownload + _processStreamer + _octUpdate + _swap;
 
-      printf("\rcuda: %.2f%% | gpuDownload: %.2f%% | octUpdate: %.2f%% | swap: %.2f%% (%u frames/s)", (float)_cuda / total * 100.f, (float)_gpuDownload / total * 100.f, (float)_octUpdate / total * 100.f, (float)_swap / total * 100.f, _frames);
+      printf("\rcuda: %.2f%% | gpuDownload: %.2f%% | processStreamer: %.2f%% | octUpdate: %.2f%% | swap: %.2f%% (%u frames/s)", (float)_cuda / total * 100.f, (float)_gpuDownload / total * 100.f, (float)_processStreamer / total * 100.f, (float)_octUpdate / total * 100.f, (float)_swap / total * 100.f, _frames);
     
       _cuda = 0;
       _gpuDownload = 0;
+      _processStreamer = 0;
       _octUpdate = 0;
       _swap = 0;
       _frames = 0;
     }
   }
 
-  Cleanup(&__cuda__pRenderBuffer, &__cuda__pOctreeData);
+  Cleanup(&__cuda__pRenderBuffer, &__cuda__pOctreeData, &__cuda__pStreamerData);
 
   pWindow->Close();
   delete(pWindow);
