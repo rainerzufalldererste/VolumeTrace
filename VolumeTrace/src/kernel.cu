@@ -8,7 +8,8 @@
 #include "cuda_runtime.h"
 
 #include "default.h"
-#include "CudaOctree.cuh"
+#include "cudaHelper.h"
+#include "Octree.h"
 
 enum
 {

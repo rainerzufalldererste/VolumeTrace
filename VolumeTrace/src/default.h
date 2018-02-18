@@ -17,6 +17,7 @@
 #include "cuda_runtime.h"
 #include "vector_types.h"
 #include "vector_functions.h"
+#include "cudaHelper.h"
 
 #define MALLOC(type, count) ((type *)malloc(sizeof(type) * count))
 #define MALLOC2D(type, countX, countY) ((type *)malloc(sizeof(type) * countX * countY))

@@ -26,12 +26,14 @@ int main(int argc, char* pArgv[])
 
   Window *pWindow = new Window("VolumeTrace", SizeX, SizeY);
   uchar4 *__cuda__pRenderBuffer;
-  Octree *pOctree = new Octree(2);
+  Octree *pOctree = new Octree(3);
 
   pOctree->AddNode(make_ulonglong3(0, 0, 0))->m_color = make_float4(1, 1, 1, 1);
   pOctree->AddNode(make_ulonglong3(1, 0, 0))->m_color = make_float4(1, 0, 0, 1);
   pOctree->AddNode(make_ulonglong3(0, 1, 0))->m_color = make_float4(0, 1, 0, 1);
   pOctree->AddNode(make_ulonglong3(0, 0, 1))->m_color = make_float4(0, 0, 1, 1);
+
+  pOctree->CalculateParentNodes();
 
   pOctree->Save("octree.oct");
 

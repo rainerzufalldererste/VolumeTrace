@@ -56,6 +56,8 @@ bool OctreeNode::IsLeaf()
 
 Octree::Octree(uint8_t defaultOctreeDepth)
 {
+  m_pFile = nullptr;
+
   for (size_t i = 0; i < FirstOctreeIndex; i++)
     m_nodes.AddEntry();
 
@@ -127,6 +129,9 @@ OctreeNode * Octree::GetNode(uOctPtr_t index)
 
 OctreeNode * Octree::AddNode(ulonglong3 position)
 {
+  if (m_pFile != nullptr)
+    return nullptr;
+
   uint64_t midx = m_center;
   uint64_t midy = m_center;
   uint64_t midz = m_center;
@@ -154,7 +159,18 @@ OctreeNode * Octree::AddNode(ulonglong3 position)
 
     uint8_t index = x | y | z;
 
-    pNode = pNode->AddChild(this, index, &nodeIndex);
+    pNode->m_isSolid = 1;
+
+    if (pNode->m_childIndex == 0)
+    {
+      pNode = pNode->AddChild(this, index, &nodeIndex);
+    }
+    else
+    {
+      pNode->m_childFlags |= 1 << index;
+      nodeIndex = pNode->m_childIndex + index;
+      pNode = GetNode(nodeIndex);
+    }
   }
 
   pNode->m_isSolid = 1;
@@ -184,6 +200,9 @@ void Octree::Save(char * filename)
 
 void Octree::Enqueue(uOctPtr_t parentIndex)
 {
+  if (m_pFile == nullptr)
+    return;
+
   m_streamerQueue.Enqueue(parentIndex);
 }
 
@@ -262,6 +281,40 @@ void Octree::SetUpload(UploadFunc * pCallback)
 void Octree::SetFinishUpload(FinishUploadFunc * pCallback)
 {
   m_pFinishUploadCallback = pCallback;
+}
+
+float4 AverageColors(OctreeNode *pNode, Octree *pOctree)
+{
+  if (pNode->m_isSolid && pNode->m_childIndex)
+  {
+    uint8_t count = 0;
+    float4 avgCol = make_float4(0, 0, 0, 0);
+    uint8_t flag = 1;
+
+    for (uOctPtr_t i = 0; i < 8; i++)
+    {
+      if (pNode->m_childFlags & flag)
+      {
+        avgCol = alphaAdd(avgCol, AverageColors(pOctree->GetNode(pNode->m_childIndex + i), pOctree));
+        count++;
+      }
+
+      flag <<= 1;
+    }
+
+    if (count > 0)
+      return pNode->m_color = alphaDivide(avgCol, (float)count);
+  }
+
+  return pNode->m_color;
+}
+
+void Octree::CalculateParentNodes()
+{
+  if (m_pFile != nullptr)
+    return;
+
+  AverageColors(GetNode(1), this);
 }
 
 OctreeNode * Octree::AddNode()

@@ -47,6 +47,7 @@ public:
   void SetMaxSize(size_t maxSize);
   void SetUpload(UploadFunc *pCallback);
   void SetFinishUpload(FinishUploadFunc *pCallback);
+  void CalculateParentNodes();
 
 private:
   ChunkedArray<OctreeNode, 256> m_nodes; // blockSize no less than 8
