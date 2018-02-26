@@ -17,19 +17,23 @@
 #include "cuda_runtime.h"
 #include "vector_types.h"
 #include "vector_functions.h"
+#include "cublas_v2.h"
 #include "cudaHelper.h"
 
-#define MALLOC(type, count) ((type *)malloc(sizeof(type) * count))
-#define MALLOC2D(type, countX, countY) ((type *)malloc(sizeof(type) * countX * countY))
-#define MALLOC3D(type, countX, countY, countZ) ((type *)malloc(sizeof(type) * countX * countY * countZ))
-#define REALLOC(ptr, type, count) (ptr = (type *)realloc(ptr, sizeof(type) * count))
-#define REALLOC2D(ptr, type, countX, countY) (ptr = (type *)realloc(ptr, sizeof(type) * countX * countY))
-#define REALLOC3D(ptr, type, countX, countY, countZ) (ptr = (type *)realloc(ptr, sizeof(type) * countX * countY * countZ))
+// D3DX9Math
+#include "math_def.h"
+
+#define MALLOC(type, count) ((type *)malloc(sizeof(type) * (count)))
+#define MALLOC2D(type, countX, countY) ((type *)malloc(sizeof(type) * (countX) * (countY)))
+#define MALLOC3D(type, countX, countY, countZ) ((type *)malloc(sizeof(type) * (countX) * (countY) * (countZ)))
+#define REALLOC(ptr, type, count) (ptr = (type *)realloc(ptr, sizeof(type) * (count)))
+#define REALLOC2D(ptr, type, countX, countY) (ptr = (type *)realloc(ptr, sizeof(type) * (countX) * (countY)))
+#define REALLOC3D(ptr, type, countX, countY, countZ) (ptr = (type *)realloc(ptr, sizeof(type) * (countX) * (countY) * (countZ)))
 #define FREE(ptr) {free(ptr); ptr = nullptr;}
-#define MEMSET(ptr, value, type, count) (memset(ptr, value, sizeof(type) * count))
-#define MEMSET2D(ptr, value, type, countX, countY) (memset(ptr, value, sizeof(type) * countX * countY))
-#define MEMSET3D(ptr, value, type, countX, countY, countZ) (memset(ptr, value, sizeof(type) * countX * countY * countZ))
-#define MEMCPY(dst, src, type, count) (memcpy(dst, src, sizeof(type) * count))
+#define MEMSET(ptr, value, type, count) (memset(ptr, value, sizeof(type) * (count)))
+#define MEMSET2D(ptr, value, type, countX, countY) (memset(ptr, value, sizeof(type) * (countX) * (countY)))
+#define MEMSET3D(ptr, value, type, countX, countY, countZ) (memset(ptr, value, sizeof(type) * (countX) * (countY) * (countZ)))
+#define MEMCPY(dst, src, type, count) (memcpy(dst, src, sizeof(type) * (count)))
 #define UNUSED(v) ((void)v)
 #define RELASSERT(booleanExpression) {assert(booleanExpression);}
 
@@ -40,6 +44,7 @@
 #endif
 
 #define PI M_PI
+#define TWOPI 6.283185307179586476925286766559
 #define HALFPI M_PI_2
 #define QUARTERPI M_PI_4
 #define SQRT2 M_SQRT2
@@ -47,6 +52,9 @@
 #define SQRT3 1.414213562373095048801688724209698
 #define INV_SQRT3 0.5773502691896257645091487805019574556
 #define PIf 3.141592653589793f
+#define TWOPIf 6.283185307179586f
+#define HALFPIf ((float)M_PI_2)
+#define QUARTERPIf ((float)M_PI_4)
 #define SQRT2f 1.414213562373095f
 #define INVSQRT2f 0.7071067811865475f
 #define SQRT3f 1.414213562373095f

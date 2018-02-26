@@ -48,6 +48,7 @@ public:
   void SetUpload(UploadFunc *pCallback);
   void SetFinishUpload(FinishUploadFunc *pCallback);
   void CalculateParentNodes();
+  void OptimizeNodePositions(); // Move nodes with most children to the top. (& remove empty nodes inbetween?) -> makes octree non-writeable.
 
 private:
   ChunkedArray<OctreeNode, 256> m_nodes; // blockSize no less than 8
