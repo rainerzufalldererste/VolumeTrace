@@ -10,7 +10,7 @@ enum
   SizeX = 720,
   SizeY = 480,
   Samples = 5,
-  GpuBufferSize = 256 * 1024 * 1024,
+  GpuBufferSize = 512 * 1024 * 1024,
 };
 
 int main(int argc, char * pArgv[]);
@@ -31,20 +31,19 @@ int main(int argc, char* pArgv[])
   uOctPtr_t *__cuda__pStreamerData;
   uOctPtr_t *pStreamerData = MALLOC2D(uOctPtr_t, SizeX, SizeY);
   Octree *pOctree = new Octree(6);
+  vec3 cameraPosition = vec3(-5.0f, -5.0f, -5.0f);
 
-  mat4x4 viewMat, projMat;
-  D3DXMatrixLookAtLH(&viewMat, &vec3(-5.0f, -5.0f, -5.f), &vec3(0, 0, 0), &vec3(0, 1, 0));
-  D3DXMatrixPerspectiveFovLH(&projMat, 65, SizeX / (float)SizeY, 0.01f, 1000.0f);
-  mat4x4 cameraMatrix = projMat * viewMat;
-  //D3DXMatrixTranspose(&cameraMatrix, &cameraMatrix);
-  mat4x4 inverseCameraMatrix;
-  float determinant = D3DXMatrixDeterminant(&cameraMatrix);
-  D3DXMatrixInverse(&inverseCameraMatrix, &determinant, &cameraMatrix);
+  mat4x4 viewMat;
+  D3DXMatrixLookAtLH(&viewMat, &cameraPosition, &vec3(0, 0, 0), &vec3(0, 1, 0));
 
   pOctree->AddNode(make_ulonglong3(0, 0, 0))->m_color = make_float4(1, 1, 1, 1);
   pOctree->AddNode(make_ulonglong3(1, 0, 0))->m_color = make_float4(1, 0, 0, 1);
   pOctree->AddNode(make_ulonglong3(0, 1, 0))->m_color = make_float4(0, 1, 0, 1);
   pOctree->AddNode(make_ulonglong3(0, 0, 1))->m_color = make_float4(0, 0, 1, 1);
+  pOctree->AddNode(make_ulonglong3(0, 0, 0))->m_color = make_float4(1, 1, 1, 1);
+  pOctree->AddNode(make_ulonglong3(2, 1, 0))->m_color = make_float4(1, 1, 0, 1);
+  pOctree->AddNode(make_ulonglong3(0, 1, 2))->m_color = make_float4(0, 1, 1, 1);
+  pOctree->AddNode(make_ulonglong3(2, 0, 1))->m_color = make_float4(1, 0, 1, 1);
 
   pOctree->CalculateParentNodes();
 
@@ -64,32 +63,9 @@ int main(int argc, char* pArgv[])
 
   while (true)
   {
-    //for (size_t y = 0; y < SizeX; y++)
-    //{
-    //  for (size_t x = 0; x < SizeY; x++)
-    //  {
-    //    float tmin, tmax;
-    //    vec4 dir;
-    //    D3DXVec3Transform(&dir, &vec3((x / (float)SizeX - 0.5f), (y / (float)SizeY - 0.5f), 0.725f), &viewMat);//-0.8565f, 1);
-    //    float3 dir3 = normalize(*(float3 *)&dir);
-    //    ray r = make_ray(make_float3(-5.f, -5.f, -5.f), dir3);
-    //    float3 block[2] = { make_float3(0, 0, 0), make_float3(2 << 5, 2 << 5, 2 << 5) };
-    //
-    //    intersection_distances_no_if(r, block, tmin, tmax);
-    //
-    //    if (tmin < tmax)
-    //      pRenderBuffer[x + y * SizeX] = 0xFFFF00 + (uint8_t)(tmin * 255.0f);
-    //    else
-    //      pRenderBuffer[x + y * SizeX] = 0x111111;
-    //  }
-    //}
-    //
-    //pWindow->Swap();
-    //continue;
-
     uint32_t start = SDL_GetTicks();
 
-    Render(SizeX, SizeY, Samples, __cuda__pRenderBuffer, __cuda__pOctreeData, __cuda__pStreamerData, viewMat);
+    Render(SizeX, SizeY, pOctree->GetLayerDepth(), cameraPosition, __cuda__pRenderBuffer, __cuda__pOctreeData, __cuda__pStreamerData, viewMat);
 
     uint32_t cuda = SDL_GetTicks() - start;
     start = SDL_GetTicks();

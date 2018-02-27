@@ -317,6 +317,11 @@ void Octree::CalculateParentNodes()
   AverageColors(GetNode(1), this);
 }
 
+uint8_t Octree::GetLayerDepth()
+{
+  return m_defaultOctreeDepth;
+}
+
 OctreeNode * Octree::AddNode()
 {
   return m_nodes.AddEntry();

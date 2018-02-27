@@ -14,118 +14,160 @@
 
 enum
 {
-	BlockSize = 512,
+	BlockSize = 64,
 };
 
 __device__ OctreeNode *g__cuda__pOctData;
 
 __host__ __device__ inline float cheapLength(float3 f) { return f.x + f.y + f.z; }
 
-__host__ __device__
-uint8_t renderRecursive(uOctPtr_t octNode, ray r, float3 blockA, float3 blockB, uint64_t size, mat4x4 &cameraMatrix, uchar4 &__cuda__pRenderBuffer, uOctPtr_t &__cuda__pStreamerData, float3 &cameraPosition, const float maxDistance, int stackSize = 1)
+__device__
+uint8_t renderRecursive(uOctPtr_t octNode, ray r, float tmin, float3 blockA, float3 blockB, uint64_t size, mat4x4 &cameraMatrix, uchar4 &__cuda__pRenderBuffer, uOctPtr_t &__cuda__pStreamerData, float3 &cameraPosition, const float maxDistance, int stackSize, int &index)
 {
-  if (stackSize == 10)
+  float tmax;
+  float3 pBlock[2];
+  float tmins[8];
+
+  OctreeNode node = g__cuda__pOctData[octNode];
+
+  if (!node.m_isSolid)
   {
-    __cuda__pRenderBuffer = make_uchar4(0, 255, 255, 0);
-    return stackSize;
+    return 0;
   }
-
-  float tmin, tmax;
-  float3 pBlock[2] = { blockA, blockB };
-  intersection_distances_no_if(r, pBlock, tmin, tmax);
-
-  if (tmin < tmax)
+  else if (size <= 1 || /*cheapLength((blockA + blockB / 2.0f) - cameraPosition) > maxDistance || */stackSize == 20)
   {
-    OctreeNode node = g__cuda__pOctData[octNode];
-
-    if (!node.m_isSolid)
-      return 0;
-    else if (size <= 1 || cheapLength((blockA + blockB / 2.0f) - cameraPosition) < maxDistance)
+    printf("SIZE EXIT.\n");
+    __cuda__pRenderBuffer = cast_float4_to_uchar4(node.m_color);
+    return 1;
+  }
+  else if (node.m_childFlags)
+  {
+    if (node.m_unloadedChildren)
     {
+      __cuda__pStreamerData = octNode;
       __cuda__pRenderBuffer = cast_float4_to_uchar4(node.m_color);
-      return stackSize;
-    }
-    else if (node.m_childFlags)
-    {
-      if (node.m_unloadedChildren)
-      {
-        __cuda__pStreamerData = octNode;
-        __cuda__pRenderBuffer = cast_float4_to_uchar4(node.m_color);
-        return stackSize;
-      }
-      else
-      {
-        size >>= 1;
-
-        float3 intersection = r.origin + r.direction * tmin;
-
-        uint8_t childIndex = (intersection.x >= blockA.x + size) + ((intersection.y >= blockA.y + size) << 1) + ((intersection.z >= blockA.z + size) << 2);
-
-        if (node.m_childFlags & (1 << childIndex))
-        {
-          float3 offsetA = make_float3((childIndex & 1), (childIndex & 2) >> 1, (childIndex & 4) >> 2) * size;
-          float3 offsetB = make_float3(size - offsetA.x, size - offsetA.y, size - offsetA.z);
-
-          return renderRecursive(node.m_childIndex + childIndex, r, blockA + offsetA, blockB - offsetB, size, cameraMatrix, __cuda__pRenderBuffer, __cuda__pStreamerData, cameraPosition, maxDistance, stackSize + 1);
-        }
-        else
-        {
-          __cuda__pRenderBuffer = make_uchar4(stackSize * 20, 27, 15, 0);
-          return stackSize; //!!!!!!!!!!!!!!
-        }
-      }
+      return 1;
     }
     else
     {
-      __cuda__pRenderBuffer = cast_float4_to_uchar4(node.m_color);
-      return stackSize;
+      size >>= 1;
+
+      float3 intersection = r.origin + r.direction * tmin;
+
+      uint8_t found = 0;
+      uint8_t childIndex = (intersection.x >= blockA.x + size) + ((intersection.y >= blockA.y + size) << 1) + ((intersection.z >= blockA.z + size) << 2);
+
+      if (node.m_childFlags & (1 << childIndex))
+      {
+        pBlock[0] = make_float3((childIndex & 1), (childIndex & 2) >> 1, (childIndex & 4) >> 2) * size;
+        pBlock[1] = blockB - make_float3(size - pBlock[0].x, size - pBlock[0].y, size - pBlock[0].z);
+
+        pBlock[0] += blockA;
+        intersection_distances_no_if(r, pBlock, tmins[childIndex], tmax);
+
+        if (tmins[childIndex] < tmax) // redundant?
+        {
+          found = renderRecursive(node.m_childIndex + childIndex, r, tmins[childIndex], pBlock[0], pBlock[1], size, cameraMatrix, __cuda__pRenderBuffer, __cuda__pStreamerData, cameraPosition, maxDistance, stackSize + 1, index);
+
+          if (found)
+            return found;
+        }
+      }
+
+      int indexes[7];
+      int indexT = 0;
+
+#pragma unroll
+      for (size_t i = 0; i < 8; i++)
+      {
+        if (i == childIndex)
+          continue;
+
+        if (node.m_childFlags & (1 << i))
+        {
+          pBlock[0] = make_float3((i & 1), (i & 2) >> 1, (i & 4) >> 2) * size;
+          pBlock[1] = blockB - make_float3(size - pBlock[0].x, size - pBlock[0].y, size - pBlock[0].z);
+
+          pBlock[0] += blockA;
+
+          intersection_distances_no_if(r, pBlock, tmins[i], tmax);
+
+          if (tmins[i] < tmax)
+          {
+            indexes[indexT] = i;
+            indexT++;
+          }
+        }
+      }
+
+      int lswap = indexT;
+      int llswap;
+
+      for (size_t i = 0; i < lswap; i++)
+      {
+        llswap = lswap;
+
+        for (size_t j = 1; j < llswap; j++)
+        {
+          if (tmins[indexes[j - 1]] > tmins[indexes[j]])
+          {
+            // swap
+            indexes[j - 1] ^= indexes[j];
+            indexes[j] ^= indexes[j - 1];
+            indexes[j - 1] ^= indexes[j];
+            lswap = j;
+          }
+        }
+      }
+
+      llswap = 0;
+
+      while (llswap < indexT)
+      {
+        pBlock[0] = make_float3((indexes[llswap] & 1), (indexes[llswap] & 2) >> 1, (indexes[llswap] & 4) >> 2) * size;
+        pBlock[1] = make_float3(size - pBlock[0].x, size - pBlock[0].y, size - pBlock[0].z);
+
+        found = renderRecursive(node.m_childIndex + indexes[llswap], r, tmins[indexes[llswap]], blockA + pBlock[0], blockB - pBlock[1], size, cameraMatrix, __cuda__pRenderBuffer, __cuda__pStreamerData, cameraPosition, maxDistance, stackSize + 1, index);
+
+        if (found)
+          return found;
+
+        llswap++;
+      }
+
+      return 0;
     }
   }
   else
   {
-    return 0;
+    __cuda__pRenderBuffer = cast_float4_to_uchar4(node.m_color);
+    return 1;
   }
 }
 
 __global__
-void renderKernel(size_t count, size_t width, size_t height, size_t samples, uchar4 *__cuda__pRenderBuffer, OctreeNode *__cuda__pOctData, uOctPtr_t *__cuda__pStreamerData, mat4x4 cameraMatrix)
+void renderKernel(size_t count, size_t width, size_t height, size_t layers, vec3 cameraPosition, uchar4 *__cuda__pRenderBuffer, OctreeNode *__cuda__pOctData, uOctPtr_t *__cuda__pStreamerData, mat4x4 cameraMatrix)
 {
-  // Load first 48kb of octree into a shared buffer sounds good, doesn't it?
-  // or every 100 frames recalculate which nodes should be streamed into every block (messes up indexes...)
-
   int i = blockIdx.x * blockDim.x + threadIdx.x;
 
   int x = i % width;
   int y = i / width;
-
-  int halfX = x >> 1;
-  int halfY = y >> 1;
 
   if (i >= count) 
   {
     return;
   }
 
-  uint32_t node = 1;
-  OctreeNode currentNode = __cuda__pOctData[node];
-  int renderSize = 1 << 8;
-  uint8_t layer = 0;
-
-  float tmin, tmax;
+  int renderSize = 1 << layers;
   float4 dir = cameraMatrix * make_float4((x / (float)width - 0.5f), (y / (float)height - 0.5f), 0.725f, 1);
-  float3 dir3 = normalize(*(float3 *)&dir);
+  float3 dir3 = /*normalize*/(*(float3 *)&dir);
   ray r = make_ray(make_float3(-5.f, -5.f, -5.f), dir3);
   float3 block[2] = { make_float3(0, 0, 0), make_float3(renderSize, renderSize, renderSize) };
+  float tmin, tmax;
+  intersection_distances_no_if(r, block, tmin, tmax);
 
-  if (renderRecursive(1, r, block[0], block[1], renderSize, cameraMatrix, __cuda__pRenderBuffer[i], __cuda__pStreamerData[i], r.origin, 1.0f / width))
-  {
-    return;
-  }
-  else
-  {
+  if(tmin >= tmax || !renderRecursive(1, r, tmin, block[0], block[1], renderSize, cameraMatrix, __cuda__pRenderBuffer[i], __cuda__pStreamerData[i], r.origin, renderSize, 1, i))
     __cuda__pRenderBuffer[i] = make_uchar4(15, 15, 15, 0);
-    return;
-  }
 }
 
 extern "C" 
@@ -147,7 +189,7 @@ extern "C"
     ASSERT(error == cudaSuccess);
   }
 
-	void Render(size_t width, size_t height, size_t samples, uchar4 *__cuda__pRenderBuffer, void *__cuda__pOctreeData, uOctPtr_t *__cuda__pStreamerData, mat4x4 cameraMatrix)
+	void Render(size_t width, size_t height, size_t layers, vec3 cameraPosition, uchar4 *__cuda__pRenderBuffer, void *__cuda__pOctreeData, uOctPtr_t *__cuda__pStreamerData, mat4x4 cameraMatrix)
 	{
     cudaError_t error = cudaMemset(__cuda__pStreamerData, 0, sizeof(uOctPtr_t) * width * height);
     ASSERT(error == cudaSuccess);
@@ -155,7 +197,7 @@ extern "C"
     error = cudaMemcpyToSymbol(g__cuda__pOctData, &__cuda__pOctreeData, sizeof(OctreeNode *), 0, cudaMemcpyHostToDevice);
     ASSERT(error == cudaSuccess);
 
-    renderKernel<<<width * height, BlockSize>>>(width * height, width, height, samples, __cuda__pRenderBuffer, (OctreeNode *)__cuda__pOctreeData, __cuda__pStreamerData, cameraMatrix);
+    renderKernel<<<width * height, BlockSize>>>(width * height, width, height, layers, cameraPosition, __cuda__pRenderBuffer, (OctreeNode *)__cuda__pOctreeData, __cuda__pStreamerData, cameraMatrix);
 
     error = cudaDeviceSynchronize();
     ASSERT(error == cudaSuccess);
