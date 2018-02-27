@@ -36,7 +36,6 @@ uint8_t renderRecursive(uOctPtr_t octNode, ray r, float tmin, float3 blockA, flo
   }
   else if (size <= 1 || /*cheapLength((blockA + blockB / 2.0f) - cameraPosition) > maxDistance || */stackSize == 20)
   {
-    printf("SIZE EXIT.\n");
     __cuda__pRenderBuffer = cast_float4_to_uchar4(node.m_color);
     return 1;
   }
@@ -161,7 +160,7 @@ void renderKernel(size_t count, size_t width, size_t height, size_t layers, vec3
   int renderSize = 1 << layers;
   float4 dir = cameraMatrix * make_float4((x / (float)width - 0.5f), (y / (float)height - 0.5f), 0.725f, 1);
   float3 dir3 = /*normalize*/(*(float3 *)&dir);
-  ray r = make_ray(make_float3(-5.f, -5.f, -5.f), dir3);
+  ray r = make_ray(cameraPosition, dir3);
   float3 block[2] = { make_float3(0, 0, 0), make_float3(renderSize, renderSize, renderSize) };
   float tmin, tmax;
   intersection_distances_no_if(r, block, tmin, tmax);

@@ -44,6 +44,9 @@ int main(int argc, char* pArgv[])
   pOctree->AddNode(make_ulonglong3(2, 1, 0))->m_color = make_float4(1, 1, 0, 1);
   pOctree->AddNode(make_ulonglong3(0, 1, 2))->m_color = make_float4(0, 1, 1, 1);
   pOctree->AddNode(make_ulonglong3(2, 0, 1))->m_color = make_float4(1, 0, 1, 1);
+  pOctree->AddNode(make_ulonglong3(1, 3, 2))->m_color = make_float4(1, 0.5, 1, 1);
+  pOctree->AddNode(make_ulonglong3(1, 2, 3))->m_color = make_float4(0.5, 0.5, 1, 1);
+  pOctree->AddNode(make_ulonglong3(3, 2, 1))->m_color = make_float4(1, 0.5, 0.5, 1);
 
   pOctree->CalculateParentNodes();
 
@@ -60,9 +63,18 @@ int main(int argc, char* pArgv[])
   pOctree->SetFinishUpload(FinishUploadCallback);
 
   uint32_t *pRenderBuffer = pWindow->GetPixels();
+  float halfOctreeSize = (float)((1 << pOctree->GetLayerDepth()) >> 1);
 
   while (true)
   {
+    mat4x4 rotMat;
+    vec4 camPos4;
+    cameraPosition = vec3(-5.0f, -5.0f, -5.0f);
+    D3DXMatrixRotationYawPitchRoll(&rotMat, sinf(SDL_GetTicks() * 0.001f), cosf(SDL_GetTicks() * 0.0007f), 0.0f);
+    D3DXVec3Transform(&camPos4, &cameraPosition, &rotMat);
+    cameraPosition = vec3(camPos4.x, camPos4.y, camPos4.z);
+    D3DXMatrixLookAtLH(&viewMat, &cameraPosition, &vec3(halfOctreeSize, halfOctreeSize, halfOctreeSize), &vec3(0, 1, 0));
+
     uint32_t start = SDL_GetTicks();
 
     Render(SizeX, SizeY, pOctree->GetLayerDepth(), cameraPosition, __cuda__pRenderBuffer, __cuda__pOctreeData, __cuda__pStreamerData, viewMat);
