@@ -20,12 +20,13 @@
 #include "cublas_v2.h"
 #include "cudaHelper.h"
 
-// D3DX9Math
+// Math
 #include "math_def.h"
 
 #define MALLOC(type, count) ((type *)malloc(sizeof(type) * (count)))
 #define MALLOC2D(type, countX, countY) ((type *)malloc(sizeof(type) * (countX) * (countY)))
 #define MALLOC3D(type, countX, countY, countZ) ((type *)malloc(sizeof(type) * (countX) * (countY) * (countZ)))
+#define MALLOC_BYTES(size) (malloc(size))
 #define REALLOC(ptr, type, count) (ptr = (type *)realloc(ptr, sizeof(type) * (count)))
 #define REALLOC2D(ptr, type, countX, countY) (ptr = (type *)realloc(ptr, sizeof(type) * (countX) * (countY)))
 #define REALLOC3D(ptr, type, countX, countY, countZ) (ptr = (type *)realloc(ptr, sizeof(type) * (countX) * (countY) * (countZ)))

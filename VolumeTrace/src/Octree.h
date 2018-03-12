@@ -5,8 +5,6 @@
 #include "ChunkedArray.h"
 #include "FlushQueue.h"
 
-using namespace std;
-
 typedef uint32_t uOctPtr_t;
 typedef void (UploadFunc)(void * pData, size_t size, size_t position);
 typedef void (FinishUploadFunc)();
@@ -39,7 +37,7 @@ public:
   Octree(char *filename, bool streaming);
   uOctPtr_t GetNewChildIndex();
   OctreeNode *GetNode(uOctPtr_t index);
-  OctreeNode *AddNode(ulonglong3 position);
+  OctreeNode *AddNode(vec3u position);
   void Save(char *filename);
   void Enqueue(uOctPtr_t parentIndex);
   void Update();

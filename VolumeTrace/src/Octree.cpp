@@ -62,7 +62,7 @@ Octree::Octree(uint8_t defaultOctreeDepth)
     m_nodes.AddEntry();
 
   m_defaultOctreeDepth = defaultOctreeDepth;
-  m_center = uint64_t(1) << (defaultOctreeDepth - 2);
+  m_center = uint64_t(1) << (defaultOctreeDepth - 1);
 }
 
 Octree::Octree(char *filename, bool streaming)
@@ -127,7 +127,7 @@ OctreeNode * Octree::GetNode(uOctPtr_t index)
   return m_nodes.GetPtrAt(index);
 }
 
-OctreeNode * Octree::AddNode(ulonglong3 position)
+OctreeNode * Octree::AddNode(vec3u position)
 {
   if (m_pFile != nullptr)
     return nullptr;
@@ -135,27 +135,29 @@ OctreeNode * Octree::AddNode(ulonglong3 position)
   uint64_t midx = m_center;
   uint64_t midy = m_center;
   uint64_t midz = m_center;
+  uint64_t halfsize = (uint64_t)1 << (uint64_t)(m_defaultOctreeDepth - 1);
 
-  uint8_t layersLeft = m_defaultOctreeDepth - 1;
+  uint8_t layersLeft = m_defaultOctreeDepth;
   OctreeNode *pNode = GetNode(1);
   uOctPtr_t nodeIndex = 1;
 
   while (layersLeft > 0)
   {
     layersLeft--;
+    halfsize >>= 1;
 
     uint8_t x = (position.x >= midx);
     uint8_t y = (position.y >= midy) << 1;
     uint8_t z = (position.z >= midz) << 2;
 
-    if (x) midx += (midx >> 1);
-    else midx -= (midx >> 1);
+    if (x) midx += halfsize;
+    else midx -= halfsize;
 
-    if (y) midy += (midy >> 1);
-    else midy -= (midy >> 1);
+    if (y) midy += halfsize;
+    else midy -= halfsize;
 
-    if (z) midz += (midz >> 1);
-    else midz -= (midz >> 1);
+    if (z) midz += halfsize;
+    else midz -= halfsize;
 
     uint8_t index = x | y | z;
 
@@ -275,7 +277,8 @@ void Octree::SetUpload(UploadFunc * pCallback)
 
   size_t lastBlockIndex = (m_nodes.Size() / blockSize) * blockSize;
 
-  m_pUploadFuncCallback(m_nodes.GetPtrAt(lastBlockIndex), (m_nodes.Size() % blockSize) * sizeof(OctreeNode), lastBlockIndex * sizeof(OctreeNode));
+  if(m_nodes.Size())
+    m_pUploadFuncCallback(m_nodes.GetPtrAt(lastBlockIndex), (m_nodes.Size() % blockSize) * sizeof(OctreeNode), lastBlockIndex * sizeof(OctreeNode));
 }
 
 void Octree::SetFinishUpload(FinishUploadFunc * pCallback)

@@ -3,7 +3,7 @@
 
 #ifdef __CUDACC__
 
-#define __MATH_DEF_H__
+#define D3DXMATHTYPES
 
 struct mat4x4
 {
