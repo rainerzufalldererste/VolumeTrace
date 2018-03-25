@@ -12,48 +12,15 @@
     <ClCompile Include="src\Main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\Octree.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Window.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\PointCloud.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\default.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\kernel.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Octree.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Window.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ChunkedArray.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\FlushQueue.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\math_def.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PointCloud.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\kernel.cu">
       <Filter>cuda</Filter>
-    </CudaCompile>
-    <CudaCompile Include="src\cudaHelper.h">
-      <Filter>src</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

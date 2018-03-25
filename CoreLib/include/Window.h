@@ -7,6 +7,7 @@ class Window
 {
 public:
   Window(char *title, size_t sizeX, size_t sizeY);
+  Window(const char *title, size_t sizeX, size_t sizeY);
   ~Window();
   
   uint32_t *GetPixels();
